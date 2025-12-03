@@ -1,0 +1,21 @@
+{
+  "name": "webdevfinal",
+  "version": "1.0.0",
+  "description": "MERN Stack Project for FitTrack",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "concurrently \"npm run dev --prefix server\" \"npm start --prefix client\"",
+    "install-all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "keywords": [
+    "mern",
+    "react",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
