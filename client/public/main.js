@@ -7,6 +7,7 @@ document.getElementById("progressDashboardBtn").addEventListener("click", progre
 // Fitness/Workout Logging 
 function fitnessLog() {
     Document.getElementbyId("main").innerHTML = "<p>Fitness Log Page</p>";
+    console.log("worked!")
 
 }
 
