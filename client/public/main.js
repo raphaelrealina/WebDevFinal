@@ -1,5 +1,8 @@
 //switching pages
 
+document.getElementById("fitnessLogBtn").addEventListener("click", fitnessLog);
+document.getElementById("nutritionLogBtn").addEventListener("click", nutritionLog);
+document.getElementById("progressDashboardBtn").addEventListener("click", progressDashboard);
 
 function fitnessLog() {
     Document.getElementbyId("main").innerHTML = "Fitness Log Page";
