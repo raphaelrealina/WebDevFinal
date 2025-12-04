@@ -6,20 +6,17 @@ document.getElementById("progressDashboardBtn").addEventListener("click", progre
 
 // Fitness/Workout Logging 
 function fitnessLog() {
-    Document.getElementbyId("main").innerHTML = "<p>Fitness Log Page</p>";
     console.log("worked!")
 
 }
 
 // Meal/Nutrition Logging
 function nutritionLog() {
-    Document.getElementbyId("main").innerHTML = "<p>Nutrition Log Page</p>";
 
 }
 
 // Progress Dashboard & Visualization
 function progressDashboard() {
-    Document.getElementbyId("main").innerHTML = "<p>Progress Dashboard Page</p>";
     
 }
 
