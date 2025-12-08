@@ -2,6 +2,22 @@ document.getElementById("fitnessLogBtn").addEventListener("click", fitnessLog);
 document.getElementById("nutritionLogBtn").addEventListener("click", nutritionLog);
 document.getElementById("progressDashboardBtn").addEventListener("click", progressDashboard);
 
+
+
+
+const tabButtons = document.querySelectorAll(".tab-btn");
+
+tabButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    // Remove active from all buttons
+    tabButtons.forEach(b => b.classList.remove("active"));
+
+    // Add active to the clicked button
+    btn.classList.add("active");
+  });
+});
+
+
 // 1. Define your sections for easier access
 const fitnessSection = document.getElementById("fitness"); // Corresponds to [0]
 const foodSection = document.getElementById("food");       // Corresponds to [1]
