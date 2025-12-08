@@ -58,11 +58,13 @@ header h1 {
     color: white;
 }
 
+/* 1. Hide all tab content by default */
 .tab-content {
-    display: none;
+    display: none; /* Changed from block to none */
     animation: fadeIn 0.5s;
 }
 
+/* 2. Only display the content that has the "active" class */
 .tab-content.active {
     display: block;
 }
