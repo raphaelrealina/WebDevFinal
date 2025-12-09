@@ -24,7 +24,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>React App</title>
+    <title>Fitness Tracker App</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -35,11 +35,156 @@
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+      <div class="tabs">
+          <button id ="fitnessLogBtn" class="tab-btn" >Fitness Tracker</button>
+          <button id ="nutritionLogBtn" class="tab-btn">Food Log</button>
+          <button id ="progressDashboardBtn" class="tab-btn">Progress Dashboard</button>
+      </div>
+      <div id="content">
+        <!-- Fitness Tracker Tab -->
+        <div id="fitness" class="tab-content active">
+          <div class="card">
+            <h2>🏃 Log Workout</h2>
+            <form id="fitnessForm">
+                <div class="form-group">
+                    <label for="workoutName">Workout Name</label>
+                    <input type="text" id="workoutName" required placeholder="e.g., Running, Weight Lifting">
+                </div>
+                <div class="form-group">
+                    <label for="caloriesBurned">Calories Burned</label>
+                    <input type="number" id="caloriesBurned" required placeholder="e.g., 350">
+                </div>
+                <button type="submit">Log Workout</button>
+            </form>
+        </div>
+        
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+            <div class="card">
+                <h2>Recent Workouts</h2>
+                <div id="fitnessLog" class="log-list">
+                    <div class="empty-state">
+                        <p>No workouts logged yet. Start tracking your fitness!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Food Tracker Tab -->
+        <div id="food" class="tab-content">
+            <div class="card">
+                <h2>🍽️ Log Meal</h2>
+                <form id="foodForm">
+                    <div class="form-group">
+                        <label for="mealName">Meal Name</label>
+                        <input type="text" id="mealName" required placeholder="e.g., Breakfast, Grilled Chicken">
+                    </div>
+                    <div class="form-group">
+                        <label for="calories">Calories</label>
+                        <input type="number" id="calories" required placeholder="e.g., 450">
+                    </div>
+                    <div class="form-group">
+                        <label for="protein">Protein (g)</label>
+                        <input type="number" id="protein" required placeholder="e.g., 30">
+                    </div>
+                    <div class="form-group">
+                        <label for="carbs">Carbs (g)</label>
+                        <input type="number" id="carbs" required placeholder="e.g., 45">
+                    </div>
+                    <div class="form-group">
+                        <label for="fat">Fat (g)</label>
+                        <input type="number" id="fat" required placeholder="e.g., 15">
+                    </div>
+                    <button type="submit">Log Meal</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Recent Meals</h2>
+                <div id="foodLog" class="log-list">
+                    <div class="empty-state">
+                        <p>No meals logged yet. Start tracking your nutrition!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <div class="card">
+                <h2>📊 Your Progress Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="totalWorkouts">0</h3>
+                        <p>Total Workouts</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="totalCaloriesBurned">0</h3>
+                        <p>Calories Burned</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="totalMeals">0</h3>
+                        <p>Meals Logged</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="totalCaloriesConsumed">0</h3>
+                        <p>Calories Consumed</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Nutrition Breakdown</h2>
+                <div class="progress-bars">
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Protein</span>
+                            <span id="proteinTotal">0g</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="proteinBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Carbohydrates</span>
+                            <span id="carbsTotal">0g</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="carbsBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Fats</span>
+                            <span id="fatTotal">0g</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="fatBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Calorie Balance</h2>
+                <div class="progress-bars">
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Net Calories (Consumed - Burned)</span>
+                            <span id="netCalories">0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="netCaloriesBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  
+  <script src="main.js"></script> 
   </body>
+  <link rel="stylesheet" type="text/css" href="style.css">
 </html>
