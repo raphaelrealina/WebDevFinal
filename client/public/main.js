@@ -1,12 +1,10 @@
-// ==========================================
-// 1. DATA STORAGE (Our "Variables")
-// ==========================================
+
+// DATA STORAGE 
 let workouts = []; // Stores workout objects
 let meals = [];    // Stores meal objects
 
-// ==========================================
-// 2. NAVIGATION LOGIC (Tabs)
-// ==========================================
+// NAVIGATION LOGIC (Tabs)
+
 const fitnessSection = document.getElementById("fitness");
 const foodSection = document.getElementById("food");
 const dashboardSection = document.getElementById("dashboard");
@@ -45,22 +43,20 @@ function switchTab(activeSection, activeButton) {
     activeButton.classList.add("active");
 }
 
-// ==========================================
-// 3. APP LOGIC (Forms & Display)
-// ==========================================
+// APP LOGIC (Forms & Display)
 
-// --- FITNESS LOGIC ---
+// FITNESS LOGIC
 const fitnessForm = document.getElementById("fitnessForm");
 const fitnessLogList = document.getElementById("fitnessLog");
 
 fitnessForm.addEventListener("submit", function(event) {
     event.preventDefault(); // Stop page from reloading
 
-    // 1. Get values from HTML inputs
+    // Get values from HTML inputs
     const workoutName = document.getElementById("workoutName").value;
     const calories = parseInt(document.getElementById("caloriesBurned").value);
 
-    // 2. Create an object
+    // Create an object
     const workoutEntry = {
         id: Date.now(), // Give it a unique ID
         name: workoutName,
@@ -68,13 +64,15 @@ fitnessForm.addEventListener("submit", function(event) {
         date: new Date().toLocaleTimeString()
     };
 
-    // 3. Save to our variable array
+    // Save to our variable array
     workouts.push(workoutEntry);
 
-    // 4. Update the Screen
+    // Update the Screen
     renderWorkoutList();
     fitnessForm.reset(); // Clear the text boxes
     alert("Workout Logged!");
+
+    // TODO for raf: log this info to database
 });
 
 function renderWorkoutList() {
@@ -86,7 +84,7 @@ function renderWorkoutList() {
         const itemHTML = `
             <div class="log-item">
                 <h3>${workout.name}</h3>
-                <p>🔥 ${workout.calories} kcal burned</p>
+                <p>🔥 ${workout.calories} cal burned</p>
                 <p><small>${workout.date}</small></p>
             </div>
         `;
@@ -94,21 +92,21 @@ function renderWorkoutList() {
     });
 }
 
-// --- NUTRITION LOGIC ---
+// NUTRITION LOGIC
 const foodForm = document.getElementById("foodForm");
 const foodLogList = document.getElementById("foodLog");
 
 foodForm.addEventListener("submit", function(event) {
     event.preventDefault(); // Stop page from reloading
 
-    // 1. Get values
+    // Get values
     const mealName = document.getElementById("mealName").value;
     const calories = parseInt(document.getElementById("calories").value);
     const protein = parseInt(document.getElementById("protein").value);
     const carbs = parseInt(document.getElementById("carbs").value);
     const fat = parseInt(document.getElementById("fat").value);
 
-    // 2. Create Object
+    // Create Object
     const mealEntry = {
         id: Date.now(),
         name: mealName,
@@ -118,13 +116,15 @@ foodForm.addEventListener("submit", function(event) {
         fat: fat
     };
 
-    // 3. Save to variable
+    // Save to variable
     meals.push(mealEntry);
 
-    // 4. Update Screen
+    // Update Screen
     renderMealList();
     foodForm.reset();
     alert("Meal Logged!");
+
+    // TODO for raf: log this info to database 
 });
 
 function renderMealList() {
@@ -134,7 +134,7 @@ function renderMealList() {
         const itemHTML = `
             <div class="log-item">
                 <h3>${meal.name}</h3>
-                <p>🍽️ ${meal.calories} kcal</p>
+                <p>🍽️ ${meal.calories} cal</p>
                 <p>P: ${meal.protein}g | C: ${meal.carbs}g | F: ${meal.fat}g</p>
             </div>
         `;
@@ -142,9 +142,12 @@ function renderMealList() {
     });
 }
 
-// --- DASHBOARD LOGIC ---
+// DASHBOARD LOGIC
 function updateDashboard() {
-    // 1. Calculate Totals using the arrays
+
+    // TODO for raf: make workouts and meals array equal to what the database has (rn it is local storage only)
+
+    // Calculate Totals using the arrays
     let totalWorkouts = workouts.length;
     let totalMeals = meals.length;
     
@@ -166,7 +169,7 @@ function updateDashboard() {
 
     let netCals = totalConsumed - totalBurned;
 
-    // 2. Update HTML Text
+    // Update HTML Text
     document.getElementById("totalWorkouts").innerText = totalWorkouts;
     document.getElementById("totalCaloriesBurned").innerText = totalBurned;
     document.getElementById("totalMeals").innerText = totalMeals;
@@ -177,9 +180,7 @@ function updateDashboard() {
     document.getElementById("fatTotal").innerText = totalFat + "g";
     document.getElementById("netCalories").innerText = netCals;
 
-    // 3. Update Progress Bars (Visuals)
-    // We assume a standard goal of 200g carbs/protein for the visual bar percentage, 
-    // just so the bar moves. You can adjust the denominator (200) to whatever goal you want.
+    // Update Progress Bars (Visuals)
     
     document.getElementById("proteinBar").style.width = Math.min((totalProtein / 200) * 100, 100) + "%";
     document.getElementById("carbsBar").style.width = Math.min((totalCarbs / 300) * 100, 100) + "%";
