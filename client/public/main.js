@@ -23,8 +23,8 @@ function nutritionLog() {
     switchTab(foodSection, document.getElementById("nutritionLogBtn"));
 }
 
-function progressDashboard() {
-    updateDashboard(); // Recalculate stats before showing
+async function progressDashboard() {
+    await updateDashboard(); // Recalculate stats before showing
     switchTab(dashboardSection, document.getElementById("progressDashboardBtn"));
 }
 
@@ -72,7 +72,20 @@ fitnessForm.addEventListener("submit", function(event) {
     fitnessForm.reset(); // Clear the text boxes
     alert("Workout Logged!");
 
-    // TODO for raf: log this info to database
+    const authToken = localStorage.getItem("token");
+    if (authToken) {
+        fetch("/api/workouts", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                exercise: workoutEntry.name,
+                notes: `Calories burned: ${workoutEntry.calories} at ${workoutEntry.date}`
+            })
+        }).catch((err) => console.error("Failed to log workout to database", err));
+    }
 });
 
 function renderWorkoutList() {
@@ -124,7 +137,24 @@ foodForm.addEventListener("submit", function(event) {
     foodForm.reset();
     alert("Meal Logged!");
 
-    // TODO for raf: log this info to database 
+    const authToken = localStorage.getItem("token");
+    if (authToken) {
+        fetch("/api/meals", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                items: [{
+                    name: mealEntry.name,
+                    calories: mealEntry.calories,
+                    protein: mealEntry.protein
+                }],
+                notes: `Carbs: ${mealEntry.carbs}g, Fat: ${mealEntry.fat}g`
+            })
+        }).catch((err) => console.error("Failed to log meal to database", err));
+    }
 });
 
 function renderMealList() {
@@ -143,9 +173,49 @@ function renderMealList() {
 }
 
 // DASHBOARD LOGIC
-function updateDashboard() {
+async function updateDashboard() {
 
-    // TODO for raf: make workouts and meals array equal to what the database has (rn it is local storage only)
+    const authToken = localStorage.getItem("token");
+    if (authToken) {
+        try {
+            const [workoutRes, mealRes] = await Promise.all([
+                fetch("/api/workouts", { headers: { "Authorization": `Bearer ${authToken}` } }),
+                fetch("/api/meals", { headers: { "Authorization": `Bearer ${authToken}` } })
+            ]);
+
+            if (workoutRes.ok) {
+                const workoutsFromDb = await workoutRes.json();
+                workouts = workoutsFromDb.map(w => {
+                    const caloriesMatch = (w.notes || "").match(/Calories burned:\s*(\d+)/i);
+                    return {
+                        id: w._id || w.id || Date.now(),
+                        name: w.exercise || w.name || "Workout",
+                        calories: caloriesMatch ? parseInt(caloriesMatch[1]) : 0,
+                        date: w.date || new Date().toLocaleTimeString()
+                    };
+                });
+            }
+
+            if (mealRes.ok) {
+                const mealsFromDb = await mealRes.json();
+                meals = mealsFromDb.map(m => {
+                    const firstItem = m.items && m.items[0] ? m.items[0] : {};
+                    const carbsMatch = (m.notes || "").match(/Carbs:\s*(\d+)/i);
+                    const fatMatch = (m.notes || "").match(/Fat:\s*(\d+)/i);
+                    return {
+                        id: m._id || m.id || Date.now(),
+                        name: firstItem.name || m.name || "Meal",
+                        calories: typeof m.totalCalories === "number" ? m.totalCalories : (firstItem.calories || 0),
+                        protein: typeof m.totalProtein === "number" ? m.totalProtein : (firstItem.protein || 0),
+                        carbs: carbsMatch ? parseInt(carbsMatch[1]) : 0,
+                        fat: fatMatch ? parseInt(fatMatch[1]) : 0
+                    };
+                });
+            }
+        } catch (err) {
+            console.error("Failed to sync dashboard data", err);
+        }
+    }
 
     // Calculate Totals using the arrays
     let totalWorkouts = workouts.length;
