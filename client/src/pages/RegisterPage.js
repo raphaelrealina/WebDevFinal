@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// Registration page to create an account and capture goal weight.
 import Topbar from '../components/Topbar';
 import './RegisterPage.css';
 

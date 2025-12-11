@@ -1,4 +1,5 @@
 import React from 'react';
+// Marketing/entry page with CTA to register or log in.
 import Topbar from '../components/Topbar';
 import './LandingPage.css';
 

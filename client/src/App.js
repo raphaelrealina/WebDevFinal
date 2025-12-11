@@ -42,7 +42,6 @@ function App() {
     }, [token]);
 
     useEffect(() => {
-        // If already authenticated and landing is requested, jump to dashboard
         if (token && location.pathname === '/') {
             navigate('/dashboard', { replace: true });
         }

@@ -1,4 +1,3 @@
-// server/server.js
 
 // Load environment variables from .env file
 require('dotenv').config();
@@ -14,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// --- Middleware Setup ---
+//middleware setup
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
 const corsOptions = {
     origin: clientUrl,
@@ -26,9 +25,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json()); // Middleware to parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // Accept URL-encoded bodies when needed
+app.use(express.urlencoded({ extended: true })); // Accept URL-encoded bodies
 
-// --- Database Connection ---
+//database connection
 mongoose.connect(MONGODB_URI)
     .then(() => {
         console.log('MongoDB connected successfully.');
@@ -38,8 +37,8 @@ mongoose.connect(MONGODB_URI)
         console.error(err);
     });
 
-// --- Test Route ---
-// This route is used to verify the connection from the React frontend.
+
+// route to verify connection from frontend.
 app.get('/api/status', (req, res) => {
     res.status(200).json({ 
         message: 'FitTrack Backend API is operational!',
@@ -47,12 +46,12 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// --- API Routes ---
+// API routes
 app.use('/api/users', userRoutes);
 app.use('/api/meals', mealRoutes);
 app.use('/api/workouts', workoutRoutes);
 
-// --- Start Server ---
+// starts the backend server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
 });

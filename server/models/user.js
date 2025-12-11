@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
-    // --- Authentication Fields ---
+    //Authentication Fields 
     username: {
         type: String,
         required: true,
-        unique: true, // Must be unique for account identity
+        unique: true, 
         trim: true
     },
     email: {
@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
         minlength: [8, 'Password must be at least 8 characters long'],
     },
     
-    // --- Profile/Goal Fields from Teammate ---
+    //Profile/Goal Fields
     goals: {
         type: String,
         required: false,
@@ -49,12 +49,8 @@ const userSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// ----------------------------------------------------------------
-// PRE-SAVE HOOK: HASH PASSWORD BEFORE SAVING
-// This ensures the password is never stored in plain text.
-// ----------------------------------------------------------------
+
 userSchema.pre('save', async function(next) {
-    // Only run this if password was modified or is new
     if (!this.isModified('password')) {
         return next();
     }
@@ -67,9 +63,7 @@ userSchema.pre('save', async function(next) {
     }
 });
 
-// ----------------------------------------------------------------
-// INSTANCE METHOD: COMPARE PASSWORD DURING LOGIN
-// ----------------------------------------------------------------
+//password compare method during log in
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };

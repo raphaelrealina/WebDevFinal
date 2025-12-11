@@ -1,4 +1,5 @@
 import React from 'react';
+// Guard route so only authed users can view children.
 import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ token, children }) => {

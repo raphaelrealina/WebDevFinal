@@ -1,4 +1,5 @@
 import React from 'react';
+// Simple top navigation with auth-aware actions.
 import './Topbar.css';
 
 const Topbar = ({ onHome, onLogin, onRegister, onLogout, isAuthed }) => {

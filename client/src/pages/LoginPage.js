@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// Standalone login page that posts credentials to the API.
 import Topbar from '../components/Topbar';
 import './LoginPage.css';
 

@@ -15,7 +15,7 @@ const workoutSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    duration: Number, //for things like planks, cardio, etc.
+    duration: Number,
     sets: Number,
     reps: Number,
     weight: Number,

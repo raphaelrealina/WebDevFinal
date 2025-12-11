@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Topbar from '../components/Topbar';
 import './DashboardPage.css';
 
+
+//main dashboard js and html, decided to put it all into one file and seperate the css for organizational purposes, less files less clutter 
+//same goes for the rest of the pages
 const defaultWorkoutForm = {
     exercise: '',
     duration: '',
