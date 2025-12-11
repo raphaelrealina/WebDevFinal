@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
     try {
         const meals = await Meal.find({ userId: req.userId }).sort({ date: -1 });
-        return res.json(meals);
+        return res.status(200).json(meals);
     } catch (err) {
         return res.status(500).json({ error: 'Could not fetch meals', details: err.message });
     }
@@ -16,8 +16,35 @@ router.get('/', auth, async (req, res) => {
 
 // Create a new meal
 router.post('/', auth, async (req, res) => {
+    const { items = [], notes = '', date, bodyWeight } = req.body || {};
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'At least one meal item is required' });
+    }
+
+    const normalizedItems = items
+        .map(item => ({
+            name: item.name,
+            calories: Number(item.calories) || 0,
+            protein: Number(item.protein) || 0,
+            quantity: Number(item.quantity) || 1,
+        }))
+        .filter(item => item.name);
+
+    if (normalizedItems.length === 0) {
+        return res.status(400).json({ error: 'Meal items must include a name' });
+    }
+
+    const parsedDate = date ? new Date(date) : new Date();
+
     try {
-        const meal = new Meal({ ...req.body, userId: req.userId });
+        const meal = new Meal({
+            items: normalizedItems,
+            notes,
+            userId: req.userId,
+            date: isNaN(parsedDate) ? undefined : parsedDate,
+            bodyWeight: bodyWeight !== undefined && bodyWeight !== '' ? Number(bodyWeight) : undefined,
+        });
         await meal.save();
         return res.status(201).json(meal);
     } catch (err) {
@@ -32,7 +59,7 @@ router.delete('/:id', auth, async (req, res) => {
         if (!meal) {
             return res.status(404).json({ error: 'Meal not found' });
         }
-        return res.json({ message: 'Meal deleted' });
+        return res.status(200).json({ message: 'Meal deleted' });
     } catch (err) {
         return res.status(500).json({ error: 'Could not delete meal', details: err.message });
     }

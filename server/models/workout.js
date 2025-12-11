@@ -6,6 +6,10 @@ const workoutSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    date: {
+        type: Date,
+        default: Date.now
+    },
     exercise: {
         type: String,
         required: true,
@@ -15,7 +19,7 @@ const workoutSchema = new mongoose.Schema({
     sets: Number,
     reps: Number,
     weight: Number,
-
+    bodyWeight: Number,
     notes: {
         type: String,
         trim: true

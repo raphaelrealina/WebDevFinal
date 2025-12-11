@@ -36,6 +36,7 @@ const mealSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    bodyWeight: Number,
     notes: {
         type: String,
         trim: true

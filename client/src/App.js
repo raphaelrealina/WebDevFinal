@@ -1,52 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import './App.css'; 
-// Note: Tailwind CSS classes are used here but require Tailwind setup, 
-// which is skipped for brevity. The main functionality relies on React/JS.
+import React, { useCallback, useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import './App.css';
+import LandingPage from './pages/LandingPage';
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import ProtectedRoute from './components/ProtectedRoute';
+
+const API_BASE = '/api';
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState('Connecting to backend...');
-  
-  useEffect(() => {
-    // Fetches from /api/status. The 'proxy' setting in client/package.json 
-    // redirects this request to http://localhost:5000/api/status
-    fetch('/api/status') 
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [backendStatus, setBackendStatus] = useState('Connecting to backend...');
+    const [token, setToken] = useState(() => localStorage.getItem('token') || '');
+    const [user, setUser] = useState(() => {
+        try {
+            const saved = localStorage.getItem('user');
+            return saved ? JSON.parse(saved) : null;
+        } catch (err) {
+            return null;
         }
-        return res.json();
-      })
-      .then(data => {
-        setBackendStatus(data.message);
-      })
-      .catch(err => {
-        console.error("Backend Connection Failed:", err);
-        setBackendStatus(`Connection Error: Server is down or proxy failed. Check console for details.`);
-      });
-  }, []);
+    });
 
-  // Simple UI for testing visibility
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-gray-800">
-      <div className="p-8 bg-white shadow-xl rounded-xl max-w-lg w-full">
-        <h1 className="text-3xl font-bold text-center text-indigo-600 mb-4">
-          FitTrack MERN Stack Setup
-        </h1>
-        <p className="text-center text-lg mb-6">
-          System Initialization Complete.
-        </p>
+    useEffect(() => {
+        fetch(`${API_BASE}/status`)
+            .then((res) => (res.ok ? res.json() : Promise.reject()))
+            .then((data) => {
+                setBackendStatus(data.message || 'API reachable');
+            })
+            .catch(() => setBackendStatus('Unable to reach backend API'));
+    }, []);
 
-        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-          <p className="font-semibold text-indigo-700">Backend Status:</p>
-          <p className="mt-1 text-sm font-medium">{backendStatus}</p>
-        </div>
+    useEffect(() => {
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
+    }, [token]);
 
-        <p className="mt-8 text-center text-sm text-gray-500">
-          If the status reads "operational," your client and server are connected and ready for development!
-        </p>
-      </div>
-    </div>
-  );
+    useEffect(() => {
+        // If already authenticated and landing is requested, jump to dashboard
+        if (token && location.pathname === '/') {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [token, location.pathname, navigate]);
+
+    const apiFetch = useCallback(
+        async (path, options = {}, overrideToken) => {
+            const activeToken = overrideToken !== undefined ? overrideToken : token;
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {}),
+                ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
+            };
+
+            const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (err) {
+                data = {};
+            }
+
+            if (!response.ok) {
+                const message = data.error || data.details || data.message || `Request failed with status ${response.status}`;
+                throw new Error(message);
+            }
+
+            return data;
+        },
+        [token]
+    );
+
+    const handleRegister = async (payload) => {
+        const data = await apiFetch('/users/register', { method: 'POST', body: JSON.stringify(payload) }, '');
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/dashboard', { replace: true });
+        return data;
+    };
+
+    const handleLogin = async (payload) => {
+        const data = await apiFetch('/users/login', { method: 'POST', body: JSON.stringify(payload) }, '');
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/dashboard', { replace: true });
+        return data;
+    };
+
+    const handleLogout = () => {
+        setToken('');
+        setUser(null);
+        localStorage.removeItem('user');
+        navigate('/', { replace: true });
+    };
+
+    const goHome = () => navigate('/', { replace: true });
+    const goLogin = () => navigate('/login');
+    const goRegister = () => navigate('/register');
+    const goDashboard = () => navigate('/dashboard');
+
+    return (
+        <Routes>
+            <Route
+                path="/"
+                element={
+                    <LandingPage
+                        backendStatus={backendStatus}
+                        onGetStarted={goRegister}
+                        onLogin={goLogin}
+                        onCreateAccount={goRegister}
+                        onHome={goHome}
+                        isAuthed={!!token}
+                        onLogout={handleLogout}
+                    />
+                }
+            />
+            <Route
+                path="/register"
+                element={
+                    token ? (
+                        <Navigate to="/dashboard" replace />
+                    ) : (
+                        <RegisterPage
+                            backendStatus={backendStatus}
+                            onSubmit={handleRegister}
+                            onHome={goHome}
+                            onLogin={goLogin}
+                            onRegister={goRegister}
+                        />
+                    )
+                }
+            />
+            <Route
+                path="/login"
+                element={
+                    token ? (
+                        <Navigate to="/dashboard" replace />
+                    ) : (
+                        <LoginPage
+                            backendStatus={backendStatus}
+                            onSubmit={handleLogin}
+                            onHome={goHome}
+                            onLogin={goLogin}
+                            onRegister={goRegister}
+                        />
+                    )
+                }
+            />
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute token={token}>
+                        <DashboardPage
+                            backendStatus={backendStatus}
+                            token={token}
+                            user={user}
+                            apiFetch={apiFetch}
+                            onLogout={handleLogout}
+                            onHome={goHome}
+                        />
+                    </ProtectedRoute>
+                }
+            />
+            <Route path="*" element={<Navigate to={token ? '/dashboard' : '/'} replace />} />
+        </Routes>
+    );
 }
 
 export default App;
