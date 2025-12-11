@@ -23,7 +23,7 @@ const defaultMealForm = {
 
 const pickId = (item) => item?._id || item?.id;
 
-const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome, onDashboard }) => {
+const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome }) => {
     const [workouts, setWorkouts] = useState([]);
     const [meals, setMeals] = useState([]);
     const [workoutForm, setWorkoutForm] = useState(defaultWorkoutForm);
@@ -35,6 +35,15 @@ const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome,
     const [loadError, setLoadError] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [currentMonth, setCurrentMonth] = useState(() => {
+        const d = new Date();
+        d.setDate(1);
+        return d;
+    });
+    const [settingsEmail, setSettingsEmail] = useState('');
+    const [settingsMessage, setSettingsMessage] = useState('');
+    const [settingsError, setSettingsError] = useState('');
 
     const loadData = useCallback(async () => {
         if (!token) return;
@@ -81,14 +90,14 @@ const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome,
         try {
             await apiFetch('/workouts', { method: 'POST', body: JSON.stringify(payload) });
             setWorkoutForm(defaultWorkoutForm);
-            setWorkoutMessage('Workout saved..');
+            setWorkoutMessage('Workout saved.');
             await loadData();
         } catch (err) {
             setWorkoutError(err.message);
         }
     };
 
-    const handleMealSubmit = async (event) => {
+const handleMealSubmit = async (event) => {
         event.preventDefault();
         setMealError('');
         setMealMessage('');
@@ -121,26 +130,6 @@ const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome,
         }
     };
 
-    const latestWeight = (() => {
-        const entries = [...workouts, ...meals]
-            .filter((e) => e.bodyWeight !== undefined && e.bodyWeight !== null)
-            .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
-        if (entries.length > 0) return Number(entries[0].bodyWeight);
-        if (user?.weight) return Number(user.weight);
-        return null;
-    })();
-
-    const goalWeight = user?.goalWeight ? Number(user.goalWeight) : null;
-    const goalDelta = goalWeight && latestWeight ? latestWeight - goalWeight : null;
-
-    useEffect(() => {
-        if (goalDelta !== null && Math.abs(goalDelta) <= 0.5) {
-            setShowConfetti(true);
-            const t = setTimeout(() => setShowConfetti(false), 4000);
-            return () => clearTimeout(t);
-        }
-    }, [goalDelta]);
-
     const handleDeleteWorkout = async (id) => {
         setWorkoutError('');
         try {
@@ -161,316 +150,483 @@ const DashboardPage = ({ backendStatus, token, user, apiFetch, onLogout, onHome,
         }
     };
 
+    const latestWeight = (() => {
+        const entries = [...workouts, ...meals]
+            .filter((e) => e.bodyWeight !== undefined && e.bodyWeight !== null)
+            .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+        if (entries.length > 0) return Number(entries[0].bodyWeight);
+        if (user?.weight) return Number(user.weight);
+        return null;
+    })();
+
+    const goalWeight = user?.goalWeight ? Number(user.goalWeight) : null;
+    const goalDelta = goalWeight && latestWeight ? latestWeight - goalWeight : null;
+
+    useEffect(() => {
+        if (goalDelta !== null && Math.abs(goalDelta) <= 0.5) {
+            setShowConfetti(true);
+            const t = setTimeout(() => setShowConfetti(false), 4000);
+            return () => clearTimeout(t);
+        }
+    }, [goalDelta]);
+
+    const calendarEntries = [...workouts.map((w) => ({ ...w, type: 'workout' })), ...meals.map((m) => ({ ...m, type: 'meal' }))];
+    const groupedByDate = calendarEntries.reduce((acc, entry) => {
+        const date = entry.date || entry.createdAt || entry.updatedAt;
+        const dateObj = date ? new Date(date) : null;
+        if (dateObj && !isNaN(dateObj.getTime())) {
+            const key = dateObj.toISOString().slice(0, 10);
+            acc[key] = acc[key] || [];
+            acc[key].push(entry);
+        }
+        return acc;
+    }, {});
+
+    const nextMonth = () => {
+        const d = new Date(currentMonth);
+        d.setMonth(d.getMonth() + 1);
+        setCurrentMonth(d);
+    };
+
+    const prevMonth = () => {
+        const d = new Date(currentMonth);
+        d.setMonth(d.getMonth() - 1);
+        setCurrentMonth(d);
+    };
+
+    const buildMonthMatrix = () => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const startDay = firstDay.getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+        for (let i = 0; i < startDay; i++) cells.push(null);
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(year, month, day);
+            const key = dateObj.toISOString().slice(0, 10);
+            cells.push({ day, key, entries: groupedByDate[key] || [] });
+        }
+        return cells;
+    };
+
+    const handleUpdateEmail = async (e) => {
+        e.preventDefault();
+        setSettingsMessage('');
+        setSettingsError('');
+        if (!settingsEmail) {
+            setSettingsError('Email is required');
+            return;
+        }
+        try {
+            const res = await apiFetch('/users/email', { method: 'PUT', body: JSON.stringify({ email: settingsEmail }) });
+            setSettingsMessage(`Email updated to ${res.user.email}`);
+            setSettingsEmail('');
+        } catch (err) {
+            setSettingsError(err.message);
+        }
+    };
+
     return (
         <div className="page-shell">
-            <Topbar onHome={onHome} onDashboard={onDashboard} onLogout={onLogout} isAuthed />
-            <div className="app-shell">
-                {showConfetti && (
-                    <div className="confetti">
-                        {Array.from({ length: 80 }).map((_, i) => {
-                            const left = Math.random() * 100;
-                            const dx = (Math.random() * 400 - 200).toFixed(0); // -200 to 200px
-                            const dur = (2 + Math.random() * 1.5).toFixed(2);
-                            const delay = (Math.random() * 0.6).toFixed(2);
-                            const height = (50 + Math.random() * 50).toFixed(0); // 50-100vh
-                            return (
-                                <span
-                                    key={i}
-                                    className="confetti-piece"
-                                    style={{
-                                        left: `${left}%`,
-                                        '--dx': `${dx}px`,
-                                        '--dur': `${dur}s`,
-                                        '--delay': `${delay}s`,
-                                        '--height': `${height}vh`,
-                                    }}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
-                <header className="hero">
-                    <div>
-                        <p className="eyebrow">FitTrack</p>
-                        {isSyncing && <p className="muted">Syncing with the database...</p>}
-                    </div>
-                    <div className="auth-state">
-                        <p className="muted">Signed in as</p>
-                        <p className="auth-username">{user?.username || user?.email || 'Authenticated user'}</p>
-                        <button className="secondary" onClick={onLogout}>
-                            Log out
-                        </button>
-                    </div>
-                </header>
-
-                {loadError && <p className="message error">{loadError}</p>}
-
-                <section className="grid two">
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Goal progress</h2>
-                            <p className="muted">Track against your goal weight</p>
+            <Topbar onHome={onHome} onLogout={onLogout} isAuthed />
+            <div className="dashboard-layout">
+                <aside className="sidebar">
+                    <button className={`sidebar-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+                        Dashboard
+                    </button>
+                    <button className={`sidebar-btn ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>
+                        Calendar
+                    </button>
+                    <button className={`sidebar-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+                        Settings
+                    </button>
+                </aside>
+                <div className="app-shell">
+                    {showConfetti && (
+                        <div className="confetti">
+                            {Array.from({ length: 80 }).map((_, i) => {
+                                const left = Math.random() * 100;
+                                const dx = (Math.random() * 400 - 200).toFixed(0);
+                                const dur = (2 + Math.random() * 1.5).toFixed(2);
+                                const delay = (Math.random() * 0.6).toFixed(2);
+                                const height = (50 + Math.random() * 50).toFixed(0);
+                                return (
+                                    <span
+                                        key={i}
+                                        className="confetti-piece"
+                                        style={{
+                                            left: `${left}%`,
+                                            '--dx': `${dx}px`,
+                                            '--dur': `${dur}s`,
+                                            '--delay': `${delay}s`,
+                                            '--height': `${height}vh`,
+                                        }}
+                                    />
+                                );
+                            })}
                         </div>
-                        <div className="stats-grid">
-                            <div className="stat-card">
-                                <h3>{goalWeight || '—'}</h3>
-                                <p>Goal weight (lbs)</p>
-                            </div>
-                            <div className="stat-card">
-                                <h3>{latestWeight || '—'}</h3>
-                                <p>Latest weight (lbs)</p>
-                            </div>
-                            <div className="stat-card">
-                                <h3>
-                                    {goalDelta !== null
-                                        ? `${Math.abs(goalDelta).toFixed(1)} lbs ${goalDelta > 0 ? 'to lose' : 'to gain'}`
-                                        : '—'}
-                                </h3>
-                                <p>Distance to goal</p>
-                            </div>
-                        </div>
-                        {goalDelta !== null && Math.abs(goalDelta) <= 0.5 && (
-                            <p className="message success">Goal reached!</p>
-                        )}
-                    </div>
-                </section>
+                    )}
 
-                <section className="grid two">
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Log workout</h2>
-                            <p className="muted">POST /api/workouts</p>
+                    <header className="hero">
+                        <div>
+                            <p className="eyebrow">FitTrack</p>
+                            {isSyncing && <p className="muted">Syncing with the database...</p>}
                         </div>
-                        <form className="form-grid" onSubmit={handleWorkoutSubmit}>
-                            <label>
-                                Exercise
-                                <input
-                                    name="exercise"
-                                    value={workoutForm.exercise}
-                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, exercise: e.target.value }))}
-                                    placeholder="Bench press"
-                                />
-                            </label>
-                            <div className="form-columns">
-                                <label>
-                                    Duration (min)
-                                    <input
-                                        name="duration"
-                                        type="number"
-                                        min="0"
-                                        value={workoutForm.duration}
-                                        onChange={(e) => setWorkoutForm((prev) => ({ ...prev, duration: e.target.value }))}
-                                        placeholder="45"
-                                    />
-                                </label>
-                                <label>
-                                    Sets
-                                    <input
-                                        name="sets"
-                                        type="number"
-                                        min="0"
-                                        value={workoutForm.sets}
-                                        onChange={(e) => setWorkoutForm((prev) => ({ ...prev, sets: e.target.value }))}
-                                        placeholder="3"
-                                    />
-                                </label>
-                                <label>
-                                    Reps
-                                    <input
-                                        name="reps"
-                                        type="number"
-                                        min="0"
-                                        value={workoutForm.reps}
-                                        onChange={(e) => setWorkoutForm((prev) => ({ ...prev, reps: e.target.value }))}
-                                        placeholder="10"
-                                    />
-                                </label>
-                                <label>
-                                    Weight (lbs)
-                                    <input
-                                        name="weight"
-                                        type="number"
-                                        min="0"
-                                        value={workoutForm.weight}
-                                        onChange={(e) => setWorkoutForm((prev) => ({ ...prev, weight: e.target.value }))}
-                                        placeholder="135"
-                                    />
-                                </label>
-                                <label>
-                                    Your current weight (lbs)
-                                    <input
-                                        name="bodyWeight"
-                                        type="number"
-                                        min="0"
-                                        value={workoutForm.bodyWeight}
-                                        onChange={(e) => setWorkoutForm((prev) => ({ ...prev, bodyWeight: e.target.value }))}
-                                        placeholder="165"
-                                    />
-                                </label>
-                            </div>
-                            <label>
-                                Notes
-                                <textarea
-                                    name="notes"
-                                    rows="2"
-                                    value={workoutForm.notes}
-                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, notes: e.target.value }))}
-                                    placeholder="How did it feel?"
-                                />
-                            </label>
-                            <button type="submit">Save workout</button>
-                        </form>
-                        {(workoutMessage || workoutError) && (
-                            <p className={workoutError ? 'message error' : 'message success'}>
-                                {workoutError || workoutMessage}
-                            </p>
-                        )}
-                    </div>
+                        <div className="auth-state">
+                            <p className="muted">Signed in as</p>
+                            <p className="auth-username">{user?.username || user?.email || 'Authenticated user'}</p>
+                            <button className="secondary" onClick={onLogout}>
+                                Log out
+                            </button>
+                        </div>
+                    </header>
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Log meal</h2>
-                            <p className="muted">POST /api/meals</p>
-                        </div>
-                        <form className="form-grid" onSubmit={handleMealSubmit}>
-                            <label>
-                                Meal name
-                                <input
-                                    name="name"
-                                    value={mealForm.name}
-                                    onChange={(e) => setMealForm((prev) => ({ ...prev, name: e.target.value }))}
-                                    placeholder="Grilled chicken salad"
-                                />
-                            </label>
-                            <div className="form-columns">
-                                <label>
-                                    Calories
-                                    <input
-                                        name="calories"
-                                        type="number"
-                                        min="0"
-                                        value={mealForm.calories}
-                                        onChange={(e) => setMealForm((prev) => ({ ...prev, calories: e.target.value }))}
-                                        placeholder="450"
-                                    />
-                                </label>
-                                <label>
-                                    Protein (g)
-                                    <input
-                                        name="protein"
-                                        type="number"
-                                        min="0"
-                                        value={mealForm.protein}
-                                        onChange={(e) => setMealForm((prev) => ({ ...prev, protein: e.target.value }))}
-                                        placeholder="35"
-                                    />
-                                </label>
-                                <label>
-                                    Quantity
-                                    <input
-                                        name="quantity"
-                                        type="number"
-                                        min="1"
-                                        value={mealForm.quantity}
-                                        onChange={(e) => setMealForm((prev) => ({ ...prev, quantity: e.target.value }))}
-                                        placeholder="1"
-                                    />
-                                </label>
-                                <label>
-                                    Your current weight (lbs)
-                                    <input
-                                        name="bodyWeight"
-                                        type="number"
-                                        min="0"
-                                        value={mealForm.bodyWeight}
-                                        onChange={(e) => setMealForm((prev) => ({ ...prev, bodyWeight: e.target.value }))}
-                                        placeholder="165"
-                                    />
-                                </label>
-                            </div>
-                            <label>
-                                Notes
-                                <textarea
-                                    name="notes"
-                                    rows="2"
-                                    value={mealForm.notes}
-                                    onChange={(e) => setMealForm((prev) => ({ ...prev, notes: e.target.value }))}
-                                    placeholder="Carbs, fats, or other details"
-                                />
-                            </label>
-                            <button type="submit">Save meal</button>
-                        </form>
-                        {(mealMessage || mealError) && <p className={mealError ? 'message error' : 'message success'}>{mealError || mealMessage}</p>}
-                    </div>
-                </section>
+                    {loadError && <p className="message error">{loadError}</p>}
 
-                <section className="grid two">
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Recent workouts</h2>
-                            <p className="muted">GET /api/workouts</p>
-                        </div>
-                        {workouts.length === 0 ? (
-                            <p className="muted">No workouts yet.</p>
-                        ) : (
-                            <ul className="item-list">
-                                {workouts.map((workout) => {
-                                    const id = pickId(workout);
+                    {activeTab === 'overview' && (
+                        <>
+                            <section className="grid two two-col">
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h2>Goal progress</h2>
+                                        <p className="muted">Track against your goal weight</p>
+                                    </div>
+                                    <div className="stats-grid">
+                                        <div className="stat-card">
+                                            <h3>{goalWeight ?? '—'}</h3>
+                                            <p>Goal weight (lbs)</p>
+                                        </div>
+                                        <div className="stat-card">
+                                            <h3>{latestWeight ?? '—'}</h3>
+                                            <p>Latest weight (lbs)</p>
+                                        </div>
+                                        <div className="stat-card">
+                                            <h3>
+                                                {goalDelta !== null
+                                                    ? `${Math.abs(goalDelta).toFixed(1)} lbs ${goalDelta > 0 ? 'to lose' : 'to gain'}`
+                                                    : '—'}
+                                            </h3>
+                                            <p>Distance to goal</p>
+                                        </div>
+                                    </div>
+                                    {goalDelta !== null && Math.abs(goalDelta) <= 0.5 && (
+                                        <p className="message success">Goal reached!</p>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="grid two two-col">
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h2>Log workout</h2>
+                                        <p className="muted">POST /api/workouts</p>
+                                    </div>
+                                    <form className="form-grid" onSubmit={handleWorkoutSubmit}>
+                                        <label>
+                                            Exercise
+                                            <input
+                                                name="exercise"
+                                                value={workoutForm.exercise}
+                                                onChange={(e) => setWorkoutForm((prev) => ({ ...prev, exercise: e.target.value }))}
+                                                placeholder="Bench press"
+                                            />
+                                        </label>
+                                        <div className="form-columns">
+                                            <label>
+                                                Duration (min)
+                                                <input
+                                                    name="duration"
+                                                    type="number"
+                                                    min="0"
+                                                    value={workoutForm.duration}
+                                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, duration: e.target.value }))}
+                                                    placeholder="45"
+                                                />
+                                            </label>
+                                            <label>
+                                                Sets
+                                                <input
+                                                    name="sets"
+                                                    type="number"
+                                                    min="0"
+                                                    value={workoutForm.sets}
+                                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, sets: e.target.value }))}
+                                                    placeholder="3"
+                                                />
+                                            </label>
+                                            <label>
+                                                Reps
+                                                <input
+                                                    name="reps"
+                                                    type="number"
+                                                    min="0"
+                                                    value={workoutForm.reps}
+                                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, reps: e.target.value }))}
+                                                    placeholder="10"
+                                                />
+                                            </label>
+                                            <label>
+                                                Weight (lbs)
+                                                <input
+                                                    name="weight"
+                                                    type="number"
+                                                    min="0"
+                                                    value={workoutForm.weight}
+                                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, weight: e.target.value }))}
+                                                    placeholder="135"
+                                                />
+                                            </label>
+                                            <label>
+                                                Your current weight (lbs)
+                                                <input
+                                                    name="bodyWeight"
+                                                    type="number"
+                                                    min="0"
+                                                    value={workoutForm.bodyWeight}
+                                                    onChange={(e) => setWorkoutForm((prev) => ({ ...prev, bodyWeight: e.target.value }))}
+                                                    placeholder="165"
+                                                />
+                                            </label>
+                                        </div>
+                                        <label>
+                                            Notes
+                                            <textarea
+                                                name="notes"
+                                                rows="2"
+                                                value={workoutForm.notes}
+                                                onChange={(e) => setWorkoutForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                                placeholder="How did it feel?"
+                                            />
+                                        </label>
+                                        <button type="submit">Save workout</button>
+                                    </form>
+                                    {(workoutMessage || workoutError) && (
+                                        <p className={workoutError ? 'message error' : 'message success'}>
+                                            {workoutError || workoutMessage}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h2>Log meal</h2>
+                                        <p className="muted">POST /api/meals</p>
+                                    </div>
+                                    <form className="form-grid" onSubmit={handleMealSubmit}>
+                                        <label>
+                                            Meal name
+                                            <input
+                                                name="name"
+                                                value={mealForm.name}
+                                                onChange={(e) => setMealForm((prev) => ({ ...prev, name: e.target.value }))}
+                                                placeholder="Grilled chicken salad"
+                                            />
+                                        </label>
+                                        <div className="form-columns">
+                                            <label>
+                                                Calories
+                                                <input
+                                                    name="calories"
+                                                    type="number"
+                                                    min="0"
+                                                    value={mealForm.calories}
+                                                    onChange={(e) => setMealForm((prev) => ({ ...prev, calories: e.target.value }))}
+                                                    placeholder="450"
+                                                />
+                                            </label>
+                                            <label>
+                                                Protein (g)
+                                                <input
+                                                    name="protein"
+                                                    type="number"
+                                                    min="0"
+                                                    value={mealForm.protein}
+                                                    onChange={(e) => setMealForm((prev) => ({ ...prev, protein: e.target.value }))}
+                                                    placeholder="35"
+                                                />
+                                            </label>
+                                            <label>
+                                                Quantity
+                                                <input
+                                                    name="quantity"
+                                                    type="number"
+                                                    min="1"
+                                                    value={mealForm.quantity}
+                                                    onChange={(e) => setMealForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                                                    placeholder="1"
+                                                />
+                                            </label>
+                                            <label>
+                                                Your current weight (lbs)
+                                                <input
+                                                    name="bodyWeight"
+                                                    type="number"
+                                                    min="0"
+                                                    value={mealForm.bodyWeight}
+                                                    onChange={(e) => setMealForm((prev) => ({ ...prev, bodyWeight: e.target.value }))}
+                                                    placeholder="165"
+                                                />
+                                            </label>
+                                        </div>
+                                        <label>
+                                            Notes
+                                            <textarea
+                                                name="notes"
+                                                rows="2"
+                                                value={mealForm.notes}
+                                                onChange={(e) => setMealForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                                placeholder="Carbs, fats, or other details"
+                                            />
+                                        </label>
+                                        <button type="submit">Save meal</button>
+                                    </form>
+                                    {(mealMessage || mealError) && <p className={mealError ? 'message error' : 'message success'}>{mealError || mealMessage}</p>}
+                                </div>
+                            </section>
+
+                            <section className="grid two two-col">
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h2>Recent workouts</h2>
+                                        <p className="muted">GET /api/workouts</p>
+                                    </div>
+                                    {workouts.length === 0 ? (
+                                        <p className="muted">No workouts yet.</p>
+                                    ) : (
+                                        <ul className="item-list">
+                                            {workouts.map((workout) => {
+                                                const id = pickId(workout);
+                                                return (
+                                                    <li key={id} className="item">
+                                                        <div>
+                                                            <div className="item-title">{workout.exercise}</div>
+                                                            <div className="item-meta">
+                                                                {workout.duration ? <span className="pill">{workout.duration} min</span> : null}
+                                                                {workout.sets ? <span className="pill">{workout.sets} sets</span> : null}
+                                                                {workout.reps ? <span className="pill">{workout.reps} reps</span> : null}
+                                                                {workout.weight ? <span className="pill">{workout.weight} lbs</span> : null}
+                                                            </div>
+                                                            {workout.notes && <p className="muted small">{workout.notes}</p>}
+                                                        </div>
+                                                        <button className="ghost" onClick={() => handleDeleteWorkout(id)}>
+                                                            Delete
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h2>Recent meals</h2>
+                                        <p className="muted">GET /api/meals</p>
+                                    </div>
+                                    {meals.length === 0 ? (
+                                        <p className="muted">No meals yet.</p>
+                                    ) : (
+                                        <ul className="item-list">
+                                            {meals.map((meal) => {
+                                                const id = pickId(meal);
+                                                const firstItem = meal.items && meal.items[0] ? meal.items[0] : {};
+                                                return (
+                                                    <li key={id} className="item">
+                                                        <div>
+                                                            <div className="item-title">{firstItem.name || 'Meal'}</div>
+                                                            <div className="item-meta">
+                                                                {typeof meal.totalCalories === 'number' ? <span className="pill">{meal.totalCalories} cal</span> : null}
+                                                                {typeof meal.totalProtein === 'number' ? <span className="pill">{meal.totalProtein} g protein</span> : null}
+                                                                {firstItem.quantity ? <span className="pill">x{firstItem.quantity}</span> : null}
+                                                            </div>
+                                                            {meal.notes && <p className="muted small">{meal.notes}</p>}
+                                                        </div>
+                                                        <button className="ghost" onClick={() => handleDeleteMeal(id)}>
+                                                            Delete
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            </section>
+                        </>
+                    )}
+
+                    {activeTab === 'calendar' && (
+                        <section className="card calendar-card">
+                            <div className="card-header calendar-header">
+                                <h2>
+                                    {currentMonth.toLocaleString('default', { month: 'long' })} {currentMonth.getFullYear()}
+                                </h2>
+                                <div className="calendar-nav">
+                                    <button className="ghost" onClick={prevMonth} type="button">
+                                        ←
+                                    </button>
+                                    <button className="ghost" onClick={nextMonth} type="button">
+                                        →
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="calendar-grid">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                                    <div key={d} className="calendar-dayname">
+                                        {d}
+                                    </div>
+                                ))}
+                                {buildMonthMatrix().map((cell, idx) => {
+                                    if (!cell) {
+                                        return <div key={`blank-${idx}`} className="calendar-cell empty" />;
+                                    }
+                                    const hasEntries = cell.entries.length > 0;
                                     return (
-                                        <li key={id} className="item">
-                                            <div>
-                                                <div className="item-title">{workout.exercise}</div>
-                                                <div className="item-meta">
-                                                    {workout.duration ? <span className="pill">{workout.duration} min</span> : null}
-                                                    {workout.sets ? <span className="pill">{workout.sets} sets</span> : null}
-                                                    {workout.reps ? <span className="pill">{workout.reps} reps</span> : null}
-                                                    {workout.weight ? <span className="pill">{workout.weight} lbs</span> : null}
-                                                </div>
-                                                {workout.notes && <p className="muted small">{workout.notes}</p>}
+                                        <div key={cell.key} className={`calendar-cell ${hasEntries ? 'has-entries' : ''}`}>
+                                            <div className="calendar-cell-header">
+                                                <span>{cell.day}</span>
                                             </div>
-                                            <button className="ghost" onClick={() => handleDeleteWorkout(id)}>
-                                                Delete
-                                            </button>
-                                        </li>
+                                            <div className="calendar-cell-body">
+                                                {cell.entries.slice(0, 3).map((entry) => (
+                                                    <span key={pickId(entry)} className="pill mini">
+                                                        {entry.type === 'workout' ? entry.exercise : entry.items?.[0]?.name || 'Meal'}
+                                                    </span>
+                                                ))}
+                                                {cell.entries.length > 3 && (
+                                                    <span className="muted small">+{cell.entries.length - 3} more</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </ul>
-                        )}
-                    </div>
+                            </div>
+                        </section>
+                    )}
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Recent meals</h2>
-                            <p className="muted">GET /api/meals</p>
-                        </div>
-                        {meals.length === 0 ? (
-                            <p className="muted">No meals yet.</p>
-                        ) : (
-                            <ul className="item-list">
-                                {meals.map((meal) => {
-                                    const id = pickId(meal);
-                                    const firstItem = meal.items && meal.items[0] ? meal.items[0] : {};
-                                    return (
-                                        <li key={id} className="item">
-                                            <div>
-                                                <div className="item-title">{firstItem.name || 'Meal'}</div>
-                                                <div className="item-meta">
-                                                    {typeof meal.totalCalories === 'number' ? <span className="pill">{meal.totalCalories} cal</span> : null}
-                                                    {typeof meal.totalProtein === 'number' ? <span className="pill">{meal.totalProtein} g protein</span> : null}
-                                                    {firstItem.quantity ? <span className="pill">x{firstItem.quantity}</span> : null}
-                                                </div>
-                                                {meal.notes && <p className="muted small">{meal.notes}</p>}
-                                            </div>
-                                            <button className="ghost" onClick={() => handleDeleteMeal(id)}>
-                                                Delete
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </div>
-                </section>
+                    {activeTab === 'settings' && (
+                        <section className="card">
+                            <div className="card-header">
+                                <h2>Settings</h2>
+                                <p className="muted">Update your email</p>
+                            </div>
+                            <form className="form-grid" onSubmit={handleUpdateEmail}>
+                                <label>
+                                    New email
+                                    <input
+                                        type="email"
+                                        value={settingsEmail}
+                                        onChange={(e) => setSettingsEmail(e.target.value)}
+                                        placeholder="newemail@example.com"
+                                    />
+                                </label>
+                                <button type="submit">Update email</button>
+                            </form>
+                            {(settingsMessage || settingsError) && (
+                                <p className={settingsError ? 'message error' : 'message success'}>{settingsError || settingsMessage}</p>
+                            )}
+                        </section>
+                    )}
+                </div>
             </div>
         </div>
     );
