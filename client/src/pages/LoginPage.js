@@ -44,16 +44,12 @@ const LoginPage = ({ backendStatus, onSubmit, onHome, onLogin, onRegister }) => 
                     <div>
                         <p className="eyebrow">Welcome back</p>
                         <h1>Login</h1>
-                        <p className="status-badge">
-                            Backend status: <span className="status-text">{backendStatus}</span>
-                        </p>
-                    </div>
+                        </div>
                 </header>
 
                 <div className="card auth-card">
                     <div className="card-header">
                         <h2>Login</h2>
-                        <p className="muted">POST /api/users/login</p>
                     </div>
                     <form className="form-grid" onSubmit={handleSubmit}>
                         <label>

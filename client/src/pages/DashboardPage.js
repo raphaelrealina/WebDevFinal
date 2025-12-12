@@ -323,7 +323,7 @@ const handleMealSubmit = async (event) => {
                                 <div className="card">
                                     <div className="card-header">
                                         <h2>Log workout</h2>
-                                        <p className="muted">POST /api/workouts</p>
+                                        <p className="muted">Log previous, or upcoming workouts to the calendar</p>
                                     </div>
                                     <form className="form-grid" onSubmit={handleWorkoutSubmit}>
                                         <label>
@@ -414,7 +414,7 @@ const handleMealSubmit = async (event) => {
                                 <div className="card">
                                     <div className="card-header">
                                         <h2>Log meal</h2>
-                                        <p className="muted">POST /api/meals</p>
+                                        <p className="muted">Log previous, or upcoming meals to the calendar</p>
                                     </div>
                                     <form className="form-grid" onSubmit={handleMealSubmit}>
                                         <label>
@@ -492,7 +492,6 @@ const handleMealSubmit = async (event) => {
                                 <div className="card">
                                     <div className="card-header">
                                         <h2>Recent workouts</h2>
-                                        <p className="muted">GET /api/workouts</p>
                                     </div>
                                     {workouts.length === 0 ? (
                                         <p className="muted">No workouts yet.</p>
@@ -525,7 +524,6 @@ const handleMealSubmit = async (event) => {
                                 <div className="card">
                                     <div className="card-header">
                                         <h2>Recent meals</h2>
-                                        <p className="muted">GET /api/meals</p>
                                     </div>
                                     {meals.length === 0 ? (
                                         <p className="muted">No meals yet.</p>

@@ -59,16 +59,12 @@ const RegisterPage = ({ backendStatus, onSubmit, onHome, onLogin, onRegister }) 
                     <div>
                         <p className="eyebrow">Create your FitTrack account</p>
                         <h1>Register</h1>
-                        <p className="status-badge">
-                            Backend status: <span className="status-text">{backendStatus}</span>
-                        </p>
                     </div>
                 </header>
 
                 <div className="card auth-card">
                     <div className="card-header">
                         <h2>Create account</h2>
-                        <p className="muted">POST /api/users/register</p>
                     </div>
                     <form className="form-grid" onSubmit={handleSubmit}>
                         <label>
@@ -143,7 +139,7 @@ const RegisterPage = ({ backendStatus, onSubmit, onHome, onLogin, onRegister }) 
                                 />
                             </label>
                         </div>
-                        <button type="submit">Register &amp; get token</button>
+                        <button type="submit">Register</button>
                     </form>
                     {(message || error) && <p className={error ? 'message error' : 'message success'}>{error || message}</p>}
                 </div>
